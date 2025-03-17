@@ -4,11 +4,10 @@ import os
 load_dotenv()
 
 # Load environment variables
-CHAT_MODEL=os.getenv("CHAT_MODEL")
-EMBEDDING_MODEL=os.getenv("EMBEDDING_MODEL")
-COLLECTION_NAME=os.getenv("COLLECTION_NAME")
-
-
+CHAT_MODEL = os.getenv("CHAT_MODEL")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
+COLLECTION_NAME = os.getenv("COLLECTION_NAME")
+GCP_API_KEY = os.getenv("GCP_API_KEY") 
 
 # Pytesseract configuration
 TESS_NEP_CONFIG = "--psm 6 --oem 3 -l nep"

@@ -2,6 +2,7 @@ from langchain_chroma import Chroma
 from langchain_ollama import OllamaEmbeddings
 import ollama
 from config import EMBEDDING_MODEL
+import random
 
 
 class VectorStore:
@@ -31,7 +32,6 @@ class VectorStore:
                 doc.metadata = {'source': source}
         
         ids = self.db.add_documents(documents=documents)
-        print(ids)
         return ids
     
     def clear_store(self):
@@ -50,9 +50,18 @@ class VectorStore:
     def get_similar_documents(self, query, top_k=5):
         result = self.db.search(query, search_type="similarity", k=top_k)
         return result
+    
+    def get_random_document(self):
+        all_documents = self.db._collection.get()
+        total_docs = len(all_documents['ids'])
+        if total_docs == 0:
+            return []
+        random_index = random.randint(0, total_docs-1)
+        random_doc = all_documents['ids'][random_index]
+        return self.db._collection.get(ids=[random_doc])
 
 vector_store = VectorStore()
 
-
 if __name__ == "__main__":
-    vector_store.clear_store()
+    # vector_store.clear_store()
+    print(vector_store.get_random_document())

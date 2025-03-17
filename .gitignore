@@ -3,3 +3,4 @@ venv/
 *.pyc
 data/
 .env
+google.json

@@ -7,6 +7,7 @@ from config import TESS_NEP_CONFIG
 from vector_store import vector_store
 from translate import translate_text
 import asyncio
+from image2text import extract_text
 
 class Document:
     """
@@ -49,10 +50,8 @@ def load_pdf(doc_path, language="en"):
             data = Document(metadata={"source": doc_path}, page_content="")
             images = convert_from_path(doc_path)
             for image in images[38:39]:
-                text = image_to_string(image, config=TESS_NEP_CONFIG).strip()
-                print(text)
+                text = extract_text(image)
                 translated_text = asyncio.run(translate_text(text))
-                print(translated_text)
                 data.page_content += translated_text
             return [data]
 
@@ -76,6 +75,13 @@ def ingest_pdf(doc_path, language="en"):
     print(f"Added {doc_path} to vector store")
 
 if __name__ == "__main__":
-    ingest_pdf("data/pdfs/history.pdf", language="ne")
-    # print(vector_store.get_similar_documents("Nepali history"))
+    import os
+    
+    en_files = os.listdir("data/pdfs/en")
+    ne_files = os.listdir("data/pdfs/ne")
+
+    for file in en_files:
+        ingest_pdf(f"data/pdfs/en/{file}", "en")
+    for file in ne_files:
+        ingest_pdf(f"data/pdfs/ne/{file}", "ne")
 
