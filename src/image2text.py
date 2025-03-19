@@ -27,13 +27,17 @@ def extract_text(image):
             ]
         }
         response = requests.post(url, json=data)
-        return response.json()['responses'][0]['fullTextAnnotation']['text']
+        if response.json()['responses'][0]:
+            return response.json()['responses'][0]['fullTextAnnotation']['text']
+        else:
+            return ""
+
     
     else:
         return pytesseract.image_to_string(image, config=TESS_NEP_CONFIG)
 
 if __name__ == "__main__":
     from PIL import Image
-    image = Image.open("data/images/3.png")
+    image = Image.open("data/images/4.png")
     text = extract_text(image)
     print(text)
