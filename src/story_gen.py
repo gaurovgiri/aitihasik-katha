@@ -19,6 +19,7 @@ def generate_story():
     Therefore, avoid using explicit section headers, bullet points, or labels.
     The script should be immersive, engaging, and fact-based for a general audience of social media users and should be around 1-2 minute long when read aloud.
     Make sure that the script has a clear beginning, middle, and end without containing "Narrator", "Camera", "Title", and similar headings. Just plain text.
+    Please avoid response like: "It appears that the provided text...." or "The text seems to be about...." and provide a direct script.
 
     ## Historical Context:
     {context}

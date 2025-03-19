@@ -4,7 +4,7 @@ from config import GCP_API_KEY, IMAGE_DIR, CHAT_MODEL
 import os
 from langchain_ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
-
+import time
 
 
 def generate_image(prompt, filename, model_name="imagen-3.0-generate-002"):
@@ -22,22 +22,31 @@ def generate_image(prompt, filename, model_name="imagen-3.0-generate-002"):
 
     prompt = ChatPromptTemplate.from_template(template).format(sentences=prompt)
     refined_prompt = llm.invoke(prompt).content.strip()
-    try:
-        images = generation_model.generate_images(
-            prompt=refined_prompt,
-            number_of_images=1,
-            aspect_ratio="9:16",
-            negative_prompt="",
-            person_generation="",
-            safety_filter_level="",
-            add_watermark=True,
-        )
-        save_path = os.path.join(IMAGE_DIR, filename)
-        images[0].save(save_path)
-    except Exception as e:
-        print("Error generating image:", e)
+    attempts_count = 0
+    while attempts_count < 3:
+        try:
+            attempts_count += 1
+            images = generation_model.generate_images(
+                prompt=refined_prompt,
+                number_of_images=1,
+                aspect_ratio="9:16",
+                negative_prompt="",
+                person_generation="",
+                safety_filter_level="",
+                add_watermark=True,
+            )
+            save_path = os.path.join(IMAGE_DIR, filename)
+            images[0].save(save_path)
+            break
+
+        except Exception as e:
+            print("Error generating image:", e)
+            print("Retrying...")
+            time.sleep(5)
+    
+    if attempts_count == 3:
         print("Using fail safe image")
-        fail_safe_image = Image.new("RGB", (1080, 1920), color="black")
+        fail_safe_image = Image.new("RGB", (768, 1408), color="black")
         save_path = os.path.join(IMAGE_DIR, filename)
         fail_safe_image.save(save_path)
 

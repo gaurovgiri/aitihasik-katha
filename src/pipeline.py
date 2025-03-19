@@ -16,10 +16,13 @@ def run_pipeline():
         group_size = 5
         group_of_five_words = [" ".join(words[i: i+group_size]) for i in range(0, len(words), group_size)]
         for sub_idx, groups in enumerate(group_of_five_words):
-            audio = generate_audio(groups, f"audio_{idx}_{sub_idx}.mp3")
-            video = generate_video(f"image_{idx}.png", f"audio_{idx}_{sub_idx}.mp3", groups, f"video_{idx}_{sub_idx}.mp4")
+            try:
+                audio = generate_audio(groups, f"audio_{idx}_{sub_idx}.mp3")
+                video = generate_video(f"image_{idx}.png", f"audio_{idx}_{sub_idx}.mp3", groups, f"video_{idx}_{sub_idx}.mp4")
+            except:
+                continue
 
-    merge_video_clips("data/output/final_output.mp4")
+    merge_video_clips("final_output.mp4")
 
 if __name__ == "__main__":
     run_pipeline()
