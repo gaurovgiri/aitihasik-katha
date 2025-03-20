@@ -2,6 +2,7 @@ from story_gen import generate_story
 from audio_gen import generate_audio
 from video_gen import generate_video, merge_video_clips
 from image_gen import generate_image
+from helper import is_stop_word, split_sentences
 
 def run_pipeline():
     story = generate_story()
@@ -12,10 +13,9 @@ def run_pipeline():
 
     for idx, segment in enumerate(segmented_stories):
         image = generate_image(segment, f"image_{idx}.png")
-        words = segment.split(' ')
-        group_size = 5
-        group_of_five_words = [" ".join(words[i: i+group_size]) for i in range(0, len(words), group_size)]
-        for sub_idx, groups in enumerate(group_of_five_words):
+        overlay_texts = split_sentences(segment)
+
+        for sub_idx, groups in enumerate(overlay_texts):
             try:
                 audio = generate_audio(groups, f"audio_{idx}_{sub_idx}.mp3")
                 video = generate_video(f"image_{idx}.png", f"audio_{idx}_{sub_idx}.mp3", groups, f"video_{idx}_{sub_idx}.mp4")
