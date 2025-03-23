@@ -11,18 +11,28 @@ def format_docs(docs):
 def is_story(story):
     llm = ChatOllama(model=CHAT_MODEL)
     prompt_template = """
-    From the given text, determine if the text is a story or not. Respond only with "Yes" or "No" without any additional information.
+    Given the following paragraphs, determine if it is a narrative story with a clear sequence of events, characters, and a plot. Respond strictly with 'Yes' or 'No' only. A narrative story typically includes a beginning, middle, and end, with events unfolding over time. If the passage is primarily an analysis, historical account, or structured informational text without a flowing storyline, respond with 'No'.
+
+    ## Paragraphs:
     {story}
     """
     prompt = ChatPromptTemplate.from_template(prompt_template)
-    response = llm.invoke(prompt.format(story=story)).content.strip()
-    if "Yes" in response or "yes" in response:
-        return True
-    return False
+    vote = []
+    for i in range(5):
+        response = llm.invoke(prompt.format(story=story)).content.strip()
+        if "Yes" in response or "yes" in response:
+            vote.append(True)
+        elif "No" in response or "no" in response:
+            vote.append(False)
+    return sum(vote) >= 3
+
+
     
+        
 
 def generate_story():
     llm = ChatOllama(model=CHAT_MODEL)
+    print(CHAT_MODEL)
     while True:
         random_content = vector_store.get_random_document()
         similar_documents = vector_store.get_similar_documents(" ".join(random_content["documents"]), top_k=5)

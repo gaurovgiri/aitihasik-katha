@@ -21,10 +21,10 @@ def generate_image(prompt, filename, model_name="imagen-3.0-generate-002"):
     """
 
     prompt = ChatPromptTemplate.from_template(template).format(sentences=prompt)
-    refined_prompt = llm.invoke(prompt).content.strip()
     attempts_count = 0
     while attempts_count < 3:
         try:
+            refined_prompt = llm.invoke(prompt).content.strip()
             attempts_count += 1
             images = generation_model.generate_images(
                 prompt=refined_prompt,
@@ -42,13 +42,14 @@ def generate_image(prompt, filename, model_name="imagen-3.0-generate-002"):
         except Exception as e:
             print("Error generating image:", e)
             print("Retrying...")
-            time.sleep(5)
+            time.sleep(10)
     
     if attempts_count == 3:
         print("Using fail safe image")
         fail_safe_image = Image.new("RGB", (768, 1408), color="black")
         save_path = os.path.join(IMAGE_DIR, filename)
         fail_safe_image.save(save_path)
+
 
 if __name__ == "__main__":
     prompt = "a painting of a beautiful sunset"
