@@ -4,3 +4,5 @@ venv/
 data/
 .env
 google.json
+.DS_Store
+test.py
