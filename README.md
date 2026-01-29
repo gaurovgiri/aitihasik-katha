@@ -2,6 +2,10 @@
 
 An AI-powered historical storytelling platform that automatically generates engaging video content from historical documents. The system uses RAG (Retrieval-Augmented Generation) to create compelling narratives, generates images, synthesizes audio, and produces complete video documentaries.
 
+## 🖵 Demo
+
+<video src="examples/example1.mp4" controls width="300"></video>
+
 ## 🎯 Features
 
 - **📚 Document Ingestion**: Process PDF documents (English and Nepali) with OCR support
