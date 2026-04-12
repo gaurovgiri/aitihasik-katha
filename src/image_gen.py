@@ -66,5 +66,5 @@ def generate_image(current_scene, full_story, filename):
 
 
 if __name__ == "__main__":
-    prompt = "a painting of a beautiful sunset"
-    generate_image(prompt, "", "output.png")
+    demo_prompt = "a painting of a beautiful sunset"
+    generate_image(demo_prompt, "", "output.png")

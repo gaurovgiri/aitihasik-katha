@@ -108,16 +108,19 @@ def create_video_clips(image, audio, text, filename):
 
 def create_video_from_image(image_filename, duration, filename):
     image_path = os.path.join(settings.IMAGE_PATH, image_filename)
+    safe_duration = max(0.6, float(duration))
     image_clip = ImageClip(image_path)
-    image_clip = image_clip.with_duration(duration)
+    image_clip = image_clip.with_duration(safe_duration)
     video = CompositeVideoClip([image_clip])
     save_path = os.path.join(settings.VIDEO_PATH, filename)
     video.write_videofile(save_path, codec="libx264", fps=10)
+    video.close()
+    image_clip.close()
     return filename
 
 
 def _build_reels_caption_clip(text, start_time, end_time, video_w, video_h):
-    """Create a glowing, bouncy subtitle clip suitable for Reels/Instagram style captions."""
+    """Create a glowing subtitle clip with a one-time intro pop animation."""
     duration = max(0.1, float(end_time) - float(start_time))
     caption_text = format_text(text).upper()
 
@@ -147,14 +150,14 @@ def _build_reels_caption_clip(text, start_time, end_time, video_w, video_h):
         **text_kwargs,
         color="white",
         stroke_color="#f5f5f5",
-        stroke_width=20,
+        stroke_width=8,
     ).with_opacity(0.22)
 
     glow_inner = TextClip(
         **text_kwargs,
         color="white",
         stroke_color="#ffffff",
-        stroke_width=15,
+        stroke_width=8,
     ).with_opacity(0.16)
 
     main = TextClip(
@@ -165,9 +168,14 @@ def _build_reels_caption_clip(text, start_time, end_time, video_w, video_h):
     )
 
     def _bump_scale(t):
-        settle_bounce = 0.07 * math.exp(-3.0 * t) * math.sin(14.0 * t)
-        steady_pulse = 0.015 * math.sin(2.0 * math.pi * 2.2 * t)
-        return 1.0 + settle_bounce + steady_pulse
+        intro_duration = 0.45
+        if t >= intro_duration:
+            return 1.0
+
+        # Quick overshoot that settles to normal size, then stays still.
+        normalized_t = t / intro_duration
+        settle_bounce = 0.10 * math.exp(-5.0 * normalized_t) * math.sin(11.0 * normalized_t)
+        return 1.0 + settle_bounce
 
     pad = max(24, int(font_size * 0.9))
     canvas_size = (main.w + 2 * pad, main.h + 2 * pad)
@@ -196,10 +204,13 @@ def _build_reels_caption_clip(text, start_time, end_time, video_w, video_h):
     return full_frame_caption.with_start(start_time).with_end(end_time)
 
     
-def merge_video_clips(filename=None, voice_over=None, subtitles=None, background_music=None):
+def merge_video_clips(filename=None, voice_over=None, subtitles=None, background_music=None, clip_filenames=None):
     """Merge all generated video clips, optionally apply audio, and write the final output file."""
     output_filename = filename or "final_output.mp4"
-    videos = [v for v in os.listdir(settings.VIDEO_PATH) if v.lower().endswith(".mp4")]
+    if clip_filenames:
+        videos = [v for v in clip_filenames if v.lower().endswith(".mp4")]
+    else:
+        videos = [v for v in os.listdir(settings.VIDEO_PATH) if v.lower().endswith(".mp4")]
 
     def _video_sort_key(video_name):
         stem = os.path.splitext(video_name)[0]
@@ -227,6 +238,8 @@ def merge_video_clips(filename=None, voice_over=None, subtitles=None, background
         return None
 
     final_clip = concatenate_videoclips(video_clips)
+    voice_clip = None
+    bgm_clip = None
 
     if voice_over:
         voice_clip = AudioFileClip(os.path.join(settings.AUDIO_PATH, voice_over))
@@ -244,6 +257,13 @@ def merge_video_clips(filename=None, voice_over=None, subtitles=None, background
 
     save_path = os.path.join(settings.OUTPUT_PATH, output_filename)
     final_clip.write_videofile(save_path, codec="libx264", fps=10)
+    final_clip.close()
+    for clip in video_clips:
+        clip.close()
+    if voice_clip:
+        voice_clip.close()
+    if bgm_clip:
+        bgm_clip.close()
     return output_filename
 
 if __name__ == "__main__":

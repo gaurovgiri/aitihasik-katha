@@ -32,7 +32,7 @@ class Settings(BaseSettings):
 
     IMAGE_PATH: str = "data/images/"
     VIDEO_PATH: str = "data/videos/"
-    AUDIO_PATH: str = "data/audio/"
+    AUDIO_PATH: str = "data/audios/"
     OUTPUT_PATH: str = "data/output/"
 
 load_dotenv()
