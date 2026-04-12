@@ -1,67 +1,59 @@
-from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
-import ollama
-from config import EMBEDDING_MODEL
-import random
-
-
+from sentence_transformers import SentenceTransformer
+import pandas as pd
+from google.cloud import aiplatform
+from config import settings
 class VectorStore:
-    def __init__(self, persist_path="data/embeddings", collection_name="nepistory"):
-        ollama.pull(EMBEDDING_MODEL)
-        self.persist_path = persist_path
-        self.collection_name = collection_name
-        self.embedding_function = OllamaEmbeddings(model=EMBEDDING_MODEL)
-        self.db = Chroma(persist_directory=persist_path,
-                        embedding_function=self.embedding_function,
-                        collection_name=collection_name)
-    
-    def get_db(self):
-        return self.db
-            
-    def document_exists(self, source):
-        result = self.db._collection.get(
-            where={"source": source}
-        )
-        return len(result['ids']) > 0
-    
-    def add_document(self, source, documents):
-        for doc in documents:
-            if 'metadata' in doc:
-                doc.metadata['source'] = source
-            else:
-                doc.metadata = {'source': source}
+    def __init__(self, source='data/embeddings/nepali-history.json'):
+        self.df = pd.read_json(source, lines=True, orient='records')
         
-        ids = self.db.add_documents(documents=documents)
-        return ids
-    
-    def clear_store(self):
-        self.db.delete_collection()
-        self.db = Chroma(persist_directory=self.persist_path,
-                        embedding_function=OllamaEmbeddings(model=EMBEDDING_MODEL),
-                        collection_name=self.collection_name)
-        print("Store cleared")
-    
-    def remove_document(self, source):
-        self.db._collection.delete(
-            where={"source": source}
+        aiplatform.init(
+            project=settings.PROJECT_ID,
+            location=settings.LOCATION
         )
-        print(f"Document {source} removed")
+        self.index = aiplatform.MatchingEngineIndex(
+            settings.INDEX_ID
+        )
+        self.index_endpoint = aiplatform.MatchingEngineIndexEndpoint(
+            settings.INDEX_ENDPOINT_ID
+        )
+        self.model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
-    def get_similar_documents(self, query, top_k=5):
-        result = self.db.search(query, search_type="similarity", k=top_k)
-        return result
+    def __len__(self):
+        return len(self.df)
+
+    def get_document_by_id(self, idx):
+        return self.df[self.df['ids'] == idx].iloc[0]['documents']
+
+    def get_document_by_ids(self, ids):
+        return self.df[self.df['ids'].isin(ids)]['documents'].to_list()
     
-    def get_random_document(self):
-        all_documents = self.db._collection.get()
-        total_docs = len(all_documents['ids'])
-        if total_docs == 0:
-            return []
-        random_index = random.randint(0, total_docs-1)
-        random_doc = all_documents['ids'][random_index]
-        return self.db._collection.get(ids=[random_doc])
+    def get_embeddings(self, text):
+        return self.model.encode(str(text)).tolist()
+    
+    def get_similar_documents(self, query, k=50):
+        query_embedding = self.get_embeddings(query)
+        response = self.index_endpoint.find_neighbors(
+            deployed_index_id=settings.DEPLOYED_INDEX_ID,
+            queries=[query_embedding],
+            num_neighbors=k
+        )
+        ids = [resp.id for resp in response[0] if resp.distance > 0.6]
+        return self.get_document_by_ids(ids)
+    
+    def add_new_source(self, source):
+        pass
 
-vector_store = VectorStore()
+    def remove_source(self, source):
+        pass
+
+    def get_random_document(self):
+        randomly_selected = self.df.sample(1)
+        return randomly_selected.iloc[0]
+
+store = VectorStore()
 
 if __name__ == "__main__":
-    # vector_store.clear_store()
-    print(vector_store.get_random_document())
+    a = VectorStore()
+    doc = a.get_random_document()
+    docs = a.get_similar_documents(doc['documents'])
+    print(docs)

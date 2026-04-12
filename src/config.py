@@ -1,22 +1,39 @@
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from dotenv import load_dotenv
-import os
+
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra='allow'
+    )
+
+    GEMINI_API_KEY: str = ''
+    EMBEDDING_MODEL: str = ''
+    CHAT_MODEL: str = ''
+    IMAGE_MODEL: str = ''
+    AUDIO_MODEL: str = ''
+
+    PROJECT_ID: str = ''
+    LOCATION: str = ''
+    BUCKET: str = ''
+    BUCKET_URI: str = ''
+
+    GOOGLE_APPLICATION_CREDENTIALS: str = ''
+    
+    DISPLAY_NAME: str = ''
+    INDEX_ID: str = ''
+    INDEX_ENDPOINT_ID: str = ''
+    DEPLOYED_INDEX_ID: str = ''
+
+    TESS_NEP_CONFIG: str = "--psm 6 --oem 3 -l nep"
+    TESS_ENG_NEP_CONFIG: str = "--psm 6 --oem 3 -l eng+nep"
+
+
+    IMAGE_PATH: str = "data/images/"
+    VIDEO_PATH: str = "data/videos/"
+    AUDIO_PATH: str = "data/audio/"
+    OUTPUT_PATH: str = "data/output/"
 
 load_dotenv()
-
-# Load environment variables
-CHAT_MODEL = os.getenv("CHAT_MODEL")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
-COLLECTION_NAME = os.getenv("COLLECTION_NAME")
-GCP_API_KEY = os.getenv("GCP_API_KEY") 
-
-# Pytesseract configuration
-TESS_NEP_CONFIG = "--psm 6 --oem 3 -l nep"
-TESS_ENG_NEP_CONFIG = "--psm 6 --oem 3 -l eng+nep"
-
-# Data Directories
-DATA_DIR = "data"
-AUDIO_DIR = f"{DATA_DIR}/audio"
-IMAGE_DIR = f"{DATA_DIR}/images"
-VIDEO_DIR = f"{DATA_DIR}/videos"
-PDF_DIR = f"{DATA_DIR}/pdfs"
-OUTPUT_DIR = f"{DATA_DIR}/output"
+settings = Settings()

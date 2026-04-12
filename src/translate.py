@@ -1,19 +1,15 @@
 from googletrans import Translator
 import  asyncio
-import requests
-from config import GCP_API_KEY
+from config import settings
+from google.cloud import translate_v2
+
+translate_client = translate_v2.Client()
 
 async def translate_text(text, source_language="ne", target_language="en"):
-    if GCP_API_KEY:
-        url = f"https://translation.googleapis.com/language/translate/v2?key={GCP_API_KEY}"
-        data = {
-            "q": text,
-            "source": source_language,
-            "target": target_language,
-            "format": "text"
-        }
-        response = requests.post(url, data=data)
-        return response.json()['data']['translations'][0]['translatedText']
+    if settings.GEMINI_API_KEY:
+        translated_text = translate_client.translate(text, target_language=target_language, source_language=source_language)
+        return translated_text['translatedText']
+        
     else:
         async with Translator() as translator:
             translated_text = ""
