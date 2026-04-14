@@ -104,17 +104,26 @@ def create_video_clips(image, audio, text, filename):
     video = CompositeVideoClip([image_clip, text_clip])
 
     save_path = os.path.join(settings.VIDEO_PATH, filename)
-    video.write_videofile(save_path, codec="libx264", fps=10)
+    video.write_videofile(save_path, codec="libx264", fps=24)
 
 def create_video_from_image(image_filename, duration, filename):
     image_path = os.path.join(settings.IMAGE_PATH, image_filename)
     safe_duration = max(0.6, float(duration))
     image_clip = ImageClip(image_path)
     image_clip = image_clip.with_duration(safe_duration)
-    video = CompositeVideoClip([image_clip])
+
+    def _ease_in_zoom_scale(t):
+        zoom_target = 1.18
+        progress = min(1.0, max(0.0, t / safe_duration))
+        eased_progress = 0.65 * progress + 0.35 * (1.0 - (1.0 - progress) * (1.0 - progress))
+        return 1.0 + (zoom_target - 1.0) * eased_progress
+
+    zoomed_image = image_clip.with_effects([vfx.Resize(_ease_in_zoom_scale)]).with_position(("center", "center"))
+    video = CompositeVideoClip([zoomed_image], size=(image_clip.w, image_clip.h))
     save_path = os.path.join(settings.VIDEO_PATH, filename)
-    video.write_videofile(save_path, codec="libx264", fps=10)
+    video.write_videofile(save_path, codec="libx264", fps=24)
     video.close()
+    zoomed_image.close()
     image_clip.close()
     return filename
 
@@ -123,18 +132,23 @@ def _build_reels_caption_clip(text, start_time, end_time, video_w, video_h):
     """Create a glowing subtitle clip with a one-time intro pop animation."""
     duration = max(0.1, float(end_time) - float(start_time))
     caption_text = format_text(text).upper()
+    caption_font = "data/fonts/KOMIKAX_.ttf"
 
+    font_size = max(52, int(video_w * 0.082))
     max_text_width = int(video_w * 0.9)
-    font_size = max(36, int(video_w * 0.06))
+    caption_box_h = int(video_h * 0.24)
 
     text_kwargs = dict(
         text=caption_text,
         method="caption",
-        size=(max_text_width, None),
-        margin=(20, 14),
+        size=(max_text_width, caption_box_h),
+        font=caption_font,
+        margin=(20, 20),
         font_size=font_size,
         text_align="center",
         horizontal_align="center",
+        vertical_align="center",
+        transparent=True,
         interline=8,
         duration=duration,
     )
@@ -143,45 +157,57 @@ def _build_reels_caption_clip(text, start_time, end_time, video_w, video_h):
         **text_kwargs,
         color="black",
         stroke_color="black",
-        stroke_width=6,
-    ).with_opacity(0.20).with_position((1, 2))
+        stroke_width=8,
+    ).with_opacity(0.28).with_position((2, 3))
+
+    glow_halo = TextClip(
+        **text_kwargs,
+        color="#fff8d6",
+        stroke_color="#fff8d6",
+        stroke_width=16,
+    ).with_opacity(0.18)
 
     glow_outer = TextClip(
         **text_kwargs,
-        color="white",
-        stroke_color="#f5f5f5",
-        stroke_width=8,
-    ).with_opacity(0.22)
+        color="#fff7b0",
+        stroke_color="#fff7b0",
+        stroke_width=12,
+    ).with_opacity(0.30)
 
     glow_inner = TextClip(
         **text_kwargs,
-        color="white",
+        color="#fffdf2",
         stroke_color="#ffffff",
-        stroke_width=8,
-    ).with_opacity(0.16)
+        stroke_width=9,
+    ).with_opacity(0.22)
 
     main = TextClip(
         **text_kwargs,
-        color="white",
-        stroke_color="#111827",
-        stroke_width=3,
+        color="#ffffff",
+        stroke_color="#0b1020",
+        stroke_width=4,
     )
 
     def _bump_scale(t):
-        intro_duration = 0.45
+        intro_duration = 0.22
+        settled_scale = 1.06
         if t >= intro_duration:
-            return 1.0
+            return settled_scale
 
-        # Quick overshoot that settles to normal size, then stays still.
-        normalized_t = t / intro_duration
-        settle_bounce = 0.10 * math.exp(-5.0 * normalized_t) * math.sin(11.0 * normalized_t)
-        return 1.0 + settle_bounce
+        # Fast punch-in with one quick overshoot, then hold steady.
+        p = t / intro_duration
+        base_lift = (settled_scale - 1.0) * p
+        overshoot = 0.10 * math.sin(math.pi * p) * math.exp(-3.8 * p)
+        return 1.0 + base_lift + overshoot
 
     pad = max(24, int(font_size * 0.9))
-    canvas_size = (main.w + 2 * pad, main.h + 2 * pad)
+    layer_w = max(shadow.w, glow_halo.w, glow_outer.w, glow_inner.w, main.w)
+    layer_h = max(shadow.h, glow_halo.h, glow_outer.h, glow_inner.h, main.h)
+    canvas_size = (layer_w + 2 * pad, layer_h + 2 * pad)
     animated_caption = CompositeVideoClip(
         [
             shadow.with_position(("center", "center")),
+            glow_halo.with_position(("center", "center")),
             glow_outer.with_position(("center", "center")),
             glow_inner.with_position(("center", "center")),
             main.with_position(("center", "center")),
@@ -191,7 +217,7 @@ def _build_reels_caption_clip(text, start_time, end_time, video_w, video_h):
     )
     animated_caption = animated_caption.with_effects([vfx.Resize(_bump_scale)])
 
-    max_scale = 1.09
+    max_scale = 1.16
     reserved_h = int(animated_caption.h * max_scale)
     target_center_y = int(video_h * 0.62)  # slightly below vertical center
     caption_y = max(0, target_center_y - (reserved_h // 2))
@@ -256,7 +282,7 @@ def merge_video_clips(filename=None, voice_over=None, subtitles=None, background
         final_clip = final_clip.with_audio(bgm_clip)
 
     save_path = os.path.join(settings.OUTPUT_PATH, output_filename)
-    final_clip.write_videofile(save_path, codec="libx264", fps=10)
+    final_clip.write_videofile(save_path, codec="libx264", fps=24)
     final_clip.close()
     for clip in video_clips:
         clip.close()
@@ -267,8 +293,24 @@ def merge_video_clips(filename=None, voice_over=None, subtitles=None, background
     return output_filename
 
 if __name__ == "__main__":
-    demo_subtitles = [((0, 4), 'subs1'),
-        ((4, 9), 'subs2'),
-        ((9, 12), 'subs3'),
-        ((12, 16), 'subs4')]
+    demo_subtitles = [
+    ((0.0, 1.0), 'This'),
+    ((1.0, 2.0), 'is'),
+    ((2.0, 3.0), 'the'),
+    ((3.0, 4.0), 'beginning'),
+    
+    ((4.0, 5.2), 'of'),
+    ((5.2, 6.4), 'a'),
+    ((6.4, 7.6), 'story'),
+    ((7.6, 9.0), 'that'),
+    
+    ((9.0, 10.0), 'slowly'),
+    ((10.0, 11.0), 'unfolds'),
+    ((11.0, 12.0), 'revealing'),
+    
+    ((12.0, 13.0), 'moments'),
+    ((13.0, 14.0), 'of'),
+    ((14.0, 15.0), 'tension'),
+    ((15.0, 16.0), 'and')
+    ]
     merge_video_clips("final_output.mp4", "story.mp3", demo_subtitles)

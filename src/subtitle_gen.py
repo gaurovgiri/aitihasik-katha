@@ -17,7 +17,6 @@ def _generate_transcription(audio_file: str) -> cloud_speech.RecognizeResponse:
     """
 
     # Instantiates a client
-    
     features = cloud_speech.RecognitionFeatures(
         enable_word_time_offsets=True,
         enable_automatic_punctuation=True,

@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ''
     EMBEDDING_MODEL: str = ''
     CHAT_MODEL: str = ''
+    IMAGE_CHAT_MODEL: str = ''
     IMAGE_MODEL: str = ''
     AUDIO_MODEL: str = ''
 

@@ -38,6 +38,10 @@ def generate_story(topic=None):
 
     response = llm.invoke(prompt)
     story = response.content
+    if isinstance(story, list):
+        for item in story:
+            if item['type'] == 'text':
+                return item['text']
     return story
     
 

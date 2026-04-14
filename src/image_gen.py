@@ -3,37 +3,74 @@ from PIL import Image
 from config import settings
 import os
 from langchain_core.prompts import PromptTemplate
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.output_parsers import StrOutputParser
 import time
 
 
 generation_model = ImageGenerationModel.from_pretrained(settings.IMAGE_MODEL)
+llm = ChatGoogleGenerativeAI(
+    model=settings.IMAGE_CHAT_MODEL,
+    api_key=settings.GEMINI_API_KEY
+)
 
-def build_prompt(current_scene, full_story):
-    return PromptTemplate.from_template("""
-        Create a cinematic, highly detailed image based on a historical narrative.
 
-        Full story context (for consistency, do not illustrate entirely):
-        {full_story}
+prompt_template = PromptTemplate.from_template("""
+You are an expert prompt engineer for AI image generation.
 
-        Current scene to depict (focus only on this moment):
-        {current_scene}
+Your task is to convert a historical narrative into a highly specific cinematic image prompt.
 
-        Instructions:
-        - Focus only on the current scene while using the full story for context
-        - Maintain consistency in characters, clothing, environment, and time period
-        - Style: realistic, cinematic lighting, high detail, dramatic composition
-        - Ensure historical accuracy (architecture, attire, setting)
-        - Emotion and atmosphere should match the scene
-        - No modern elements unless explicitly described
-        - No text, captions, or watermarks in the image
+Full story (context only, do not summarize):
+{full_story}
 
-        Output:
-        A visually immersive 9:16 vertical composition with a clear subject and rich background.
-    """).format(full_story=full_story, current_scene=current_scene)
+Current scene (focus here):
+{current_scene}
+
+Instructions:
+- Focus ONLY on the current scene
+- Extract key visual elements: characters, actions, setting, time period
+- Be very specific about:
+  - clothing
+  - architecture
+  - lighting
+  - mood
+  - camera framing (e.g., close-up, wide shot)
+- Ensure historical accuracy
+- Make each scene visually distinct
+- Avoid generic descriptions
+- No text or captions
+
+Output format:
+A single, highly detailed image generation prompt (no explanations).
+""")
+
+chain = prompt_template | llm | StrOutputParser()
+
+def generate_image_prompt(current_scene, full_story):
+    attempts = 0
+    while attempts < 5:
+        try:
+            return chain.invoke({
+                "full_story": full_story,
+                "current_scene": current_scene
+            })
+        except Exception as e:
+            print("LLM Error:", e)
+
+            # crude quota detection (adjust if needed)
+            if "quota" in str(e).lower() or "rate" in str(e).lower():
+                print("Quota hit. Waiting 30 seconds...")
+                time.sleep(30)
+            else:
+                time.sleep(5)
+
+            attempts += 1
+
+    raise Exception("Failed to generate prompt after retries")
 
 
 def generate_image(current_scene, full_story, filename):
-    prompt = build_prompt(current_scene=current_scene, full_story=full_story)
+    prompt = generate_image_prompt(current_scene=current_scene, full_story=full_story)
     attempts_count = 0
     while attempts_count < 3:
         try:
