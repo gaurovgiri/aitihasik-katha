@@ -1,21 +1,25 @@
-from story_gen import generate_story
-from audio_gen import generate_audio, get_audio_duration
-from video_gen import merge_video_clips, create_video_from_image
-from subtitle_gen import generate_transcription, get_subtitle
-from image_gen import generate_image
 import os
 import re
-from config import settings
 
-def run_pipeline():
-    story = generate_story()
+from .core.settings import ensure_directories, settings
+from .services.audio_service import generate_audio, get_audio_duration
+from .services.image_service import generate_image
+from .services.story_service import generate_story
+from .services.subtitle_service import generate_transcription, get_subtitle
+from .services.video_service import create_video_from_image, merge_video_clips
+
+
+def run_pipeline(topic: str | None = None) -> str | None:
+    ensure_directories()
+
+    story = generate_story(topic=topic)
     print("Story:\n", story)
-    
+
     audio_filename = generate_audio(story, "story.mp3")
     total_audio_duration = get_audio_duration("story.mp3")
     transcription = generate_transcription(audio_filename)
     subtitles = get_subtitle(transcription)
-    
+
     scenes = [s.strip() for s in re.split(r"[.!?]+", story) if s.strip()]
     if not scenes:
         scenes = [story.strip()]
@@ -41,7 +45,6 @@ def run_pipeline():
         if idx == len(scenes) - 1:
             end_seconds = max(end_seconds, total_audio_seconds)
 
-        # Guard against non-monotonic or tiny durations from timing drift.
         end_seconds = max(end_seconds, start_seconds + 0.6)
         duration = end_seconds - start_seconds
         start_seconds = end_seconds
@@ -56,7 +59,12 @@ def run_pipeline():
         subtitles=subtitles,
         clip_filenames=generated_video_clips,
     )
-    print(f"The video is ready at {os.path.join(settings.OUTPUT_PATH, final_video)}")
+
+    if final_video:
+        output_path = os.path.join(settings.OUTPUT_PATH, final_video)
+        print(f"The video is ready at {output_path}")
+    return final_video
+
 
 if __name__ == "__main__":
     run_pipeline()

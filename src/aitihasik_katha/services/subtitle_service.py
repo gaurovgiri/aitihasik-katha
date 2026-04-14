@@ -1,37 +1,30 @@
+import os
+
 from google.cloud.speech_v2 import SpeechClient
 from google.cloud.speech_v2.types import cloud_speech
-from config import settings
-from helper import upload_file_to_gcs, delete_file_from_gcs
-import os
+
+from ..core.settings import settings
+from ..utils.gcs import delete_file_from_gcs, upload_file_to_gcs
 
 
 client = SpeechClient()
 
-def _generate_transcription(audio_file: str) -> cloud_speech.RecognizeResponse:
-    """Transcribe an audio file.
-    Args:
-        audio_file (str): Path to the local audio file to be transcribed.
-    Returns:
-        cloud_speech.RecognizeResponse: The response from the recognize request, containing
-        the transcription results
-    """
 
-    # Instantiates a client
+def _generate_transcription(audio_file: str) -> cloud_speech.RecognizeResponse:
+    """Transcribe a GCS audio file URI with word-level time offsets."""
     features = cloud_speech.RecognitionFeatures(
         enable_word_time_offsets=True,
         enable_automatic_punctuation=True,
-
     )
-    
+
     config = cloud_speech.RecognitionConfig(
         auto_decoding_config=cloud_speech.AutoDetectDecodingConfig(),
         language_codes=["en-US"],
         model="long",
-        features=features
+        features=features,
     )
 
     file_metadata = cloud_speech.BatchRecognizeFileMetadata(uri=audio_file)
-
     request = cloud_speech.BatchRecognizeRequest(
         recognizer=f"projects/{settings.PROJECT_ID}/locations/global/recognizers/_",
         config=config,
@@ -41,10 +34,10 @@ def _generate_transcription(audio_file: str) -> cloud_speech.RecognizeResponse:
         ),
     )
 
-    # Transcribes the audio into text
     operation = client.batch_recognize(request=request)
     response = operation.result(timeout=120)
     return response.results[audio_file].transcript
+
 
 def generate_transcription(audio_file: str):
     audio_file_path = os.path.join(settings.AUDIO_PATH, audio_file)
@@ -54,16 +47,11 @@ def generate_transcription(audio_file: str):
     return response
 
 
-def get_subtitle(speech_to_text_response):
+def get_subtitle(speech_to_text_response) -> list[tuple[tuple[float, float], str]]:
     subs = []
     for result in speech_to_text_response.results:
         for words in result.alternatives[0].words:
             start_time = words.start_offset.total_seconds()
             end_time = words.end_offset.total_seconds()
-            word = words.word
-            subs.append(((start_time, end_time), word))
+            subs.append(((start_time, end_time), words.word))
     return subs
-
-
-if __name__ == "__main__":
-    print(generate_transcription("story.mp3"))
