@@ -31,38 +31,46 @@ The pipeline consists of the following components:
 
 ```
 aitihasik-katha/
-├── src/
-│   ├── pipeline.py         # Main execution pipeline
-│   ├── story_gen.py        # Story generation with RAG
-│   ├── audio_gen.py        # Audio synthesis
-│   ├── image_gen.py        # Image generation
-│   ├── video_gen.py        # Video production
-│   ├── ingest_pdfs.py      # PDF processing and ingestion
-│   ├── vector_store.py     # Vector database operations
-│   ├── translate.py        # Translation utilities
-│   ├── image2text.py       # OCR and image-to-text
-│   ├── config.py           # Configuration management
-│   └── helper.py           # Helper utilities
+├── pyproject.toml
+├── requirements.txt
+├── README.md
 ├── data/
-│   ├── audio/             # Generated audio files
-│   ├── images/            # Generated images
-│   ├── videos/            # Final video outputs
-│   ├── pdfs/              # Source PDF documents
-│   │   ├── en/           # English PDFs
-│   │   └── ne/           # Nepali PDFs
-│   ├── embeddings/        # Vector database storage
-│   └── output/            # Processing outputs
-├── requirements.txt       # Python dependencies
-├── test.py               # Test scripts
-└── google.json           # API credentials
+│   ├── audios/
+│   ├── images/
+│   ├── videos/
+│   ├── output/
+│   ├── embeddings/
+│   └── pdfs/
+│       ├── en/
+│       └── ne/
+├── src/
+│   ├── aitihasik_katha/
+│   │   ├── __main__.py
+│   │   ├── pipeline.py
+│   │   ├── cli.py
+│   │   ├── core/
+│   │   │   └── settings.py
+│   │   ├── services/
+│   │   │   ├── story_service.py
+│   │   │   ├── image_service.py
+│   │   │   ├── audio_service.py
+│   │   │   ├── subtitle_service.py
+│   │   │   └── video_service.py
+│   │   ├── ingest/
+│   │   │   └── pdf_ingestor.py
+│   │   ├── storage/
+│   │   │   └── vector_store.py
+│   │   └── utils/
+│   │       ├── gcs.py
+│   │       ├── ocr.py
+│   │       └── translation.py
 ```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.8+
-- [Ollama](https://ollama.ai/) (for local LLM)
+- Python 3.10+
 - Tesseract OCR (for PDF text extraction)
 - FFmpeg (for video processing)
 
@@ -77,6 +85,7 @@ aitihasik-katha/
 2. **Install Python dependencies**
    ```bash
    pip install -r requirements.txt
+    pip install -e .
    ```
 
 3. **Install system dependencies**
@@ -89,23 +98,19 @@ aitihasik-katha/
    brew install tesseract tesseract-lang ffmpeg
    ```
 
-4. **Install Ollama and pull the required model**
-   ```bash
-   # Install Ollama from https://ollama.ai/
-   ollama pull llama2  # or your preferred model
-   ```
-
-5. **Set up environment variables**
+4. **Set up environment variables**
    
    Create a `.env` file in the project root:
    ```env
-   CHAT_MODEL=llama2
+    CHAT_MODEL=gemini-2.0-flash
    EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-   COLLECTION_NAME=historical_documents
-   GCP_API_KEY=your_google_cloud_api_key_here
+    GEMINI_API_KEY=your_gemini_api_key_here
+    IMAGE_CHAT_MODEL=gemini-2.0-flash
+    IMAGE_MODEL=imagegeneration@006
+    AUDIO_MODEL=chirp3-hd
    ```
 
-6. **Set up Google Cloud credentials**
+5. **Set up Google Cloud credentials**
    
    Place your `google.json` credentials file in the project root.
 
@@ -117,21 +122,16 @@ First, add your historical PDF documents to the appropriate directory:
 - English PDFs → `data/pdfs/en/`
 - Nepali PDFs → `data/pdfs/ne/`
 
-Then run the ingestion script:
-```python
-from src.ingest_pdfs import load_pdf
-from src.vector_store import vector_store
-
-# Process and store documents
-docs = load_pdf("data/pdfs/en/your_document.pdf", language="en")
-vector_store.add_documents(docs)
+Then run ingestion:
+```bash
+python -m aitihasik_katha ingest --base-dir data/pdfs
 ```
 
 ### 2. Run the Complete Pipeline
 
 Execute the full pipeline to generate a video:
 ```bash
-python src/pipeline.py
+python -m aitihasik_katha run
 ```
 
 This will:
@@ -147,7 +147,7 @@ You can also run components separately:
 
 **Generate a story only:**
 ```python
-from src.story_gen import generate_story
+from aitihasik_katha.services.story_service import generate_story
 
 story = generate_story()
 print(story)
@@ -155,21 +155,21 @@ print(story)
 
 **Generate audio:**
 ```python
-from src.audio_gen import generate_audio
+from aitihasik_katha.services.audio_service import generate_audio
 
 generate_audio("Your text here", "output.mp3")
 ```
 
 **Generate images:**
 ```python
-from src.image_gen import generate_image
+from aitihasik_katha.services.image_service import generate_image
 
 generate_image("Description of the image", "output.png")
 ```
 
 ## 🔧 Configuration
 
-Edit `src/config.py` to customize:
+Edit `src/aitihasik_katha/core/settings.py` to customize:
 
 - **Models**: Change LLM and embedding models
 - **Directories**: Modify data storage locations
@@ -178,11 +178,9 @@ Edit `src/config.py` to customize:
 
 ## 🛠️ Technologies Used
 
-- **LangChain**: LLM orchestration and RAG pipeline
-- **Ollama**: Local LLM inference
-- **ChromaDB**: Vector database for embeddings
-- **ElevenLabs**: Text-to-speech audio generation
-- **PDFPlumber**: PDF text extraction
+- **LangChain**: Prompt orchestration
+- **Google Gemini / Vertex AI**: Text, image, and video generation
+- **Google Cloud Speech + TTS**: Audio transcription and synthesis
 - **Tesseract**: OCR for image-based PDFs
 - **Sentence Transformers**: Text embeddings
 - **FFmpeg**: Video and audio processing
