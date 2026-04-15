@@ -4,7 +4,7 @@ An AI-powered historical storytelling platform that automatically generates enga
 
 ## 🖵 Demo
 
-<video src="examples/example1.mp4" controls width="300"></video>
+<video src="examples/example2.mp4" controls width="300"></video>
 
 ## 🎯 Features
 
@@ -14,14 +14,14 @@ An AI-powered historical storytelling platform that automatically generates enga
 - **🎙️ Audio Synthesis**: Convert text to speech with natural voice-over
 - **🎬 Video Production**: Automatically generate complete documentary-style videos
 - **🌐 Translation**: Support for multilingual content (English/Nepali)
-- **💾 Vector Database**: Chromadb-based embedding storage for efficient retrieval
+- **💾 Vector Retrieval**: Embedding-backed retrieval with Vertex AI Matching Engine
 
 ## 🏗️ Architecture
 
 The pipeline consists of the following components:
 
 1. **PDF Ingestion** → Extract and process historical content from PDFs
-2. **Vector Store** → Store document embeddings for semantic search
+2. **Vector Retrieval** → Query semantically similar chunks from embedding/index infrastructure
 3. **Story Generation** → Use RAG to generate engaging narratives
 4. **Image Generation** → Create visuals for story segments
 5. **Audio Generation** → Synthesize voice-over audio
@@ -84,6 +84,8 @@ aitihasik-katha/
 
 2. **Install Python dependencies**
    ```bash
+    python -m venv .venv
+    source .venv/bin/activate
    pip install -r requirements.txt
     pip install -e .
    ```
@@ -100,19 +102,30 @@ aitihasik-katha/
 
 4. **Set up environment variables**
    
-   Create a `.env` file in the project root:
+    Create a `.env` file in the project root (minimum template):
    ```env
-    CHAT_MODEL=gemini-2.0-flash
-   EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
     GEMINI_API_KEY=your_gemini_api_key_here
+
+    CHAT_MODEL=gemini-2.0-flash
     IMAGE_CHAT_MODEL=gemini-2.0-flash
     IMAGE_MODEL=imagegeneration@006
     AUDIO_MODEL=chirp3-hd
+   EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+    PROJECT_ID=your_gcp_project_id
+    LOCATION=us-central1
+    BUCKET=your_gcs_bucket_name
+
+    INDEX_ID=projects/.../indexes/...
+    INDEX_ENDPOINT_ID=projects/.../indexEndpoints/...
+    DEPLOYED_INDEX_ID=your_deployed_index_id
+
+    GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/google.json
    ```
 
 5. **Set up Google Cloud credentials**
    
-   Place your `google.json` credentials file in the project root.
+    Ensure your service account JSON is available and matches `GOOGLE_APPLICATION_CREDENTIALS`.
 
 ## 📖 Usage
 
@@ -127,6 +140,11 @@ Then run ingestion:
 python -m aitihasik_katha ingest --base-dir data/pdfs
 ```
 
+For a single file:
+```bash
+python -m aitihasik_katha ingest --path data/pdfs/en/your_document.pdf --language en
+```
+
 ### 2. Run the Complete Pipeline
 
 Execute the full pipeline to generate a video:
@@ -134,12 +152,17 @@ Execute the full pipeline to generate a video:
 python -m aitihasik_katha run
 ```
 
+Optional topic seed:
+```bash
+python -m aitihasik_katha run --topic "Unification of Nepal"
+```
+
 This will:
 1. Generate a story from your historical documents
 2. Create images for each story segment
 3. Generate audio voice-overs
 4. Produce individual video clips
-5. Merge everything into a final video: `data/videos/final_output.mp4`
+5. Merge everything into a final video in `data/output/final_video.mp4`
 
 ### 3. Individual Components
 
@@ -194,7 +217,7 @@ PDF Documents
     ↓
 [Chunking & Embedding]
     ↓
-[Vector Store (ChromaDB)]
+[Vector Retrieval Index]
     ↓
 [RAG: Retrieve + Generate Story]
     ↓
