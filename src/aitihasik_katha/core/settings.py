@@ -2,6 +2,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
+import os
 
 
 class Settings(BaseSettings):
@@ -42,22 +43,24 @@ class Settings(BaseSettings):
     INSTAGRAM_PAGE_ACCESS_TOKEN: str = ""
     INSTAGRAM_USER_ID: str = ""
 
-    IMAGE_PATH: str = "data/images/"
-    VIDEO_PATH: str = "data/videos/"
-    AUDIO_PATH: str = "data/audios/"
-    OUTPUT_PATH: str = "data/output/"
+    RUNS_PATH: str = "runs/"
+    IMAGE_PATH: str = "images/"
+    VIDEO_PATH: str = "videos/"
+    AUDIO_PATH: str = "audios/"
+    OUTPUT_PATH: str = "output/"
 
 
 load_dotenv()
 settings = Settings()
 
 
-def ensure_directories() -> None:
+def ensure_directories(uuid: str) -> None:
     """Create output directories expected by the pipeline."""
+    Path(settings.RUNS_PATH).mkdir(parents=True, exist_ok=True)
     for value in [
         settings.IMAGE_PATH,
         settings.VIDEO_PATH,
         settings.AUDIO_PATH,
         settings.OUTPUT_PATH,
     ]:
-        Path(value).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join("runs", uuid, value)).mkdir(parents=True, exist_ok=True)

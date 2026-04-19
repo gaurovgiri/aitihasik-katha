@@ -25,44 +25,14 @@ VOICE_PROMPTS = [
 client = texttospeech.TextToSpeechClient()
 
 
-def merge_audio_clips(filename: str) -> None:
-    """Merge all scene audio clips into one final audio file."""
-    audios = os.listdir(settings.AUDIO_PATH)
-    if "story.mp3" in audios:
-        audios.remove("story.mp3")
-
-    audios = sorted(
-        audios,
-        key=lambda v: tuple(map(int, v.replace(".mp3", "").split("_")[1:])),
-    )
-
-    audio_clips = []
-    for audio in audios:
-        try:
-            audio_clips.append(AudioFileClip(os.path.join(settings.AUDIO_PATH, audio)))
-        except Exception:
-            continue
-
-    if not audio_clips:
-        return
-
-    final_audio = concatenate_audioclips(audio_clips)
-    save_path = os.path.join(settings.AUDIO_PATH, filename)
-    final_audio.write_audiofile(save_path)
-    final_audio.close()
-    for clip in audio_clips:
-        clip.close()
-
-
-def get_audio_duration(filename: str) -> timedelta:
-    audio = os.path.join(settings.AUDIO_PATH, filename)
-    audio_clip = AudioFileClip(audio)
+def get_audio_duration(audio_filepath: str) -> timedelta:
+    audio_clip = AudioFileClip(audio_filepath)
     duration = timedelta(seconds=audio_clip.duration)
     audio_clip.close()
     return duration
 
 
-def generate_audio(text: str, filename: str) -> str:
+def generate_audio(text: str, output_path: str) -> str:
     """Generate an MP3 audio file from plain text narration."""
     voice_prompt = random.choice(VOICE_PROMPTS)
     print(f"Using following voice prompt: {voice_prompt}")
@@ -83,9 +53,8 @@ def generate_audio(text: str, filename: str) -> str:
         audio_config=audio_config,
     )
 
-    output_filepath = os.path.join(settings.AUDIO_PATH, filename)
-    with open(output_filepath, "wb") as out:
+    with open(output_path, "wb") as out:
         out.write(response.audio_content)
-        print(f"Audio content written to file: {output_filepath}")
+        print(f"Audio content written to file: {output_path}")
 
-    return filename
+    return output_path

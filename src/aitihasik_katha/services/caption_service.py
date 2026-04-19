@@ -80,7 +80,7 @@ def generate_caption(story):
     if isinstance(caption, list):
         for item in caption:
             if item.get("type") == "text":
-                return item["text"]
+                return item.get("text")
     return str(caption)
 
 

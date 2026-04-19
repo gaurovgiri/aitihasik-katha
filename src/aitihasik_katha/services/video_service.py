@@ -75,36 +75,8 @@ def _build_video_prompt(current_scene: str, full_story: str) -> str:
         """
 
 
-def generate_video(text: str, full_story: str, filename: str) -> None:
-    source = GenerateVideosSource(prompt=_build_video_prompt(text, full_story))
-    operation = client.models.generate_videos(
-        model="veo-3.1-generate-preview",
-        source=source,
-        config=config,
-    )
 
-    while not operation.done:
-        print("Video has not been generated. Check again in 10 seconds...")
-        time.sleep(10)
-        operation = client.operations.get(operation)
-
-    if not operation.response or not operation.response.generated_videos:
-        print("No videos were generated!")
-        return
-
-    generated_video = operation.response.generated_videos[0]
-    output_path = os.path.join(settings.VIDEO_PATH, filename)
-
-    if generated_video.video:
-        client.files.download(file=generated_video.video)
-        generated_video.video.save(output_path)
-        print(f"Generated video saved to {output_path}")
-    else:
-        print("Error occurred while generating video")
-
-
-def create_video_from_image(image_filename: str, duration: float, filename: str) -> str:
-    image_path = os.path.join(settings.IMAGE_PATH, image_filename)
+def create_video_from_image(image_path: str, duration: float, output_path: str) -> str:
     safe_duration = max(0.6, float(duration))
     image_clip = ImageClip(image_path).with_duration(safe_duration)
 
@@ -118,12 +90,11 @@ def create_video_from_image(image_filename: str, duration: float, filename: str)
         ("center", "center")
     )
     video = CompositeVideoClip([zoomed_image], size=(image_clip.w, image_clip.h))
-    save_path = os.path.join(settings.VIDEO_PATH, filename)
-    video.write_videofile(save_path, codec="libx264", fps=24)
+    video.write_videofile(output_path, codec="libx264", fps=24)
     video.close()
     zoomed_image.close()
     image_clip.close()
-    return filename
+    return output_path
 
 
 def _build_reels_caption_clip(text: str, start_time: float, end_time: float, video_w: int, video_h: int):
@@ -197,17 +168,17 @@ def _build_reels_caption_clip(text: str, start_time: float, end_time: float, vid
 
 
 def merge_video_clips(
-    filename: str | None = None,
+    output_path: str | None = None,
     voice_over: str | None = None,
     subtitles: str | Iterable[tuple[tuple[float, float], str]] | None = None,
     background_music: str | None = None,
     clip_filenames: list[str] | None = None,
+    video_path: str = "",
 ) -> str | None:
-    output_filename = filename or "final_output.mp4"
     if clip_filenames:
         videos = [v for v in clip_filenames if v.lower().endswith(".mp4")]
     else:
-        videos = [v for v in os.listdir(settings.VIDEO_PATH) if v.lower().endswith(".mp4")]
+        videos = [v for v in video_path if v.lower().endswith(".mp4")]
 
     def _video_sort_key(video_name: str):
         stem = os.path.splitext(video_name)[0]
@@ -217,13 +188,13 @@ def merge_video_clips(
 
     videos = sorted(videos, key=_video_sort_key)
     if not videos:
-        print(f"No video clips found in {settings.VIDEO_PATH}. Skipping merge.")
+        print("No video clips found! Skipping merge.")
         return None
 
     video_clips = []
     for video in videos:
         try:
-            video_clips.append(VideoFileClip(os.path.join(settings.VIDEO_PATH, video)))
+            video_clips.append(VideoFileClip(video))
         except (OSError, ValueError) as exc:
             print(f"Error occurred while loading clip '{video}': {exc}")
 
@@ -236,7 +207,7 @@ def merge_video_clips(
     bgm_clip = None
 
     if voice_over:
-        voice_clip = AudioFileClip(os.path.join(settings.AUDIO_PATH, voice_over))
+        voice_clip = AudioFileClip(voice_over)
         final_clip = final_clip.with_audio(voice_clip)
 
     if subtitles:
@@ -248,11 +219,10 @@ def merge_video_clips(
         final_clip = CompositeVideoClip([final_clip, *subtitle_overlays])
 
     if background_music:
-        bgm_clip = AudioFileClip(os.path.join(settings.AUDIO_PATH, background_music))
+        bgm_clip = AudioFileClip(background_music)
         final_clip = final_clip.with_audio(bgm_clip)
 
-    save_path = os.path.join(settings.OUTPUT_PATH, output_filename)
-    final_clip.write_videofile(save_path, codec="libx264", fps=24)
+    final_clip.write_videofile(output_path, codec="libx264", fps=24)
 
     final_clip.close()
     for clip in video_clips:
@@ -262,4 +232,4 @@ def merge_video_clips(
     if bgm_clip:
         bgm_clip.close()
 
-    return output_filename
+    return output_path

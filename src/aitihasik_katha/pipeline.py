@@ -10,15 +10,19 @@ from .services.caption_service import generate_caption
 from .services.video_service import create_video_from_image, merge_video_clips
 from .utils.gcs import upload_file_to_gcs
 from .services.instagram_service import instagram
+import uuid
 
 def run_pipeline(topic: str | None = None) -> str | None:
-    ensure_directories()
+    current_run_uuid = uuid.uuid4()
+    ensure_directories(str(current_run_uuid))
 
     story = generate_story(topic=topic)
     print("Story:\n", story)
 
-    audio_filename = generate_audio(story, "story.mp3")
-    total_audio_duration = get_audio_duration("story.mp3")
+    audio_output_filepath = os.path.join(settings.RUNS_PATH, str(current_run_uuid), settings.AUDIO_PATH, "story.mp3")
+
+    audio_filename = generate_audio(story, audio_output_filepath)
+    total_audio_duration = get_audio_duration(audio_filename)
     transcription = generate_transcription(audio_filename)
     subtitles = get_subtitle(transcription)
 
@@ -35,7 +39,8 @@ def run_pipeline(topic: str | None = None) -> str | None:
     for idx, scene in enumerate(scenes):
         scene_words = max(1, len(scene.split()))
         cumulative_words += scene_words
-        image_path = generate_image(scene, story, f"image_{idx}.png")
+        image_output_filepath = os.path.join(settings.RUNS_PATH, str(current_run_uuid), settings.IMAGE_PATH, f"image_{idx}.png")
+        image_path = generate_image(scene, story, image_output_filepath)
 
         if subtitles:
             subtitle_index = min(cumulative_words - 1, len(subtitles) - 1)
@@ -51,21 +56,22 @@ def run_pipeline(topic: str | None = None) -> str | None:
         duration = end_seconds - start_seconds
         start_seconds = end_seconds
 
-        video_filename = f"video_image_clip_{idx}.mp4"
-        create_video_from_image(image_path, duration, video_filename)
-        generated_video_clips.append(video_filename)
+        imageclip_output_filepath = os.path.join(settings.RUNS_PATH, str(current_run_uuid), settings.VIDEO_PATH, f"video_image_clip_{idx}.mp4")
+        
+        imageclip_path =  create_video_from_image(image_path, duration, imageclip_output_filepath)
+        generated_video_clips.append(imageclip_path)
 
-    final_video = merge_video_clips(
-        "final_video.mp4",
+    final_video_output_filepath = os.path.join(settings.RUNS_PATH, str(current_run_uuid), settings.OUTPUT_PATH, "final_video.mp4")
+    final_video_path = merge_video_clips(
+        final_video_output_filepath,
         voice_over=audio_filename,
         subtitles=subtitles,
         clip_filenames=generated_video_clips,
     )
 
-    if final_video:
-        output_path = os.path.join(settings.OUTPUT_PATH, final_video)
-        print(f"The video is ready at {output_path}")
-        media_uri = upload_file_to_gcs(settings.BUCKET, output_path, final_video)
+    if final_video_path:
+        print(f"The video is ready at {final_video_path}")
+        media_uri = upload_file_to_gcs(settings.BUCKET, final_video_path, final_video_path)
         print(f"The video is uploaded to {media_uri}")
         print(f"Generating a caption for this video")
         caption = generate_caption(story)

@@ -72,7 +72,7 @@ def generate_image_prompt(current_scene: str, full_story: str) -> str:
     raise RuntimeError("Failed to generate prompt after retries")
 
 
-def generate_image(current_scene: str, full_story: str, filename: str) -> str:
+def generate_image(current_scene: str, full_story: str, output_path: str) -> str:
     prompt = generate_image_prompt(current_scene=current_scene, full_story=full_story)
     attempts_count = 0
     while attempts_count < 3:
@@ -87,9 +87,8 @@ def generate_image(current_scene: str, full_story: str, filename: str) -> str:
                 safety_filter_level=None,
                 add_watermark=True,
             )
-            save_path = os.path.join(settings.IMAGE_PATH, filename)
-            images[0].save(save_path)
-            return filename
+            images[0].save(output_path)
+            return output_path
         except Exception as exc:
             print("Error generating image:", exc)
             print("Retrying...")
@@ -97,6 +96,5 @@ def generate_image(current_scene: str, full_story: str, filename: str) -> str:
 
     print("Using fail safe image")
     fail_safe_image = Image.new("RGB", (768, 1408), color="black")
-    save_path = os.path.join(settings.IMAGE_PATH, filename)
-    fail_safe_image.save(save_path)
-    return filename
+    fail_safe_image.save(output_path)
+    return output_path
