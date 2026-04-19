@@ -6,7 +6,7 @@ It combines retrieval-augmented generation (RAG), image generation, text-to-spee
 
 ## 🎥 Demo
 
-<video src="https://github.com/gaurovgiri/aitihasik-katha/raw/refs/heads/main/examples/example2.mp4" controls width="300"></video>
+https://github.com/user-attachments/assets/bed1955f-2072-4d4e-b453-8095a51eb50d
 
 ## 📱 Live
 
