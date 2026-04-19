@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     TESS_NEP_CONFIG: str = "--psm 6 --oem 3 -l nep"
     TESS_ENG_NEP_CONFIG: str = "--psm 6 --oem 3 -l eng+nep"
 
+
+    INSTAGRAM_CLIENT_ID: str = ""
+    INSTAGRAM_CLIENT_SECRET: str = ""
+    INSTAGRAM_ACCESS_TOKEN: str = ""
+    INSTAGRAM_PAGE_ACCESS_TOKEN: str = ""
+    INSTAGRAM_USER_ID: str = ""
+
     IMAGE_PATH: str = "data/images/"
     VIDEO_PATH: str = "data/videos/"
     AUDIO_PATH: str = "data/audios/"
