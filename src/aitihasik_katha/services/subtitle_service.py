@@ -41,7 +41,7 @@ def _generate_transcription(audio_file: str) -> cloud_speech.RecognizeResponse:
 
 def generate_transcription(audio_file: str):
     audio_file_path = os.path.join(settings.AUDIO_PATH, audio_file)
-    bucket_file_path = upload_file_to_gcs(settings.BUCKET, audio_file_path, audio_file)
+    bucket_file_path = upload_file_to_gcs(settings.BUCKET, audio_file_path, audio_file, return_public=False)
     response = _generate_transcription(bucket_file_path)
     delete_file_from_gcs(bucket_file_path)
     return response

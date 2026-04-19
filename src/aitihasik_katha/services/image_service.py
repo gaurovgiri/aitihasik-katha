@@ -83,8 +83,8 @@ def generate_image(current_scene: str, full_story: str, filename: str) -> str:
                 number_of_images=1,
                 aspect_ratio="9:16",
                 negative_prompt="",
-                person_generation="",
-                safety_filter_level="",
+                person_generation="allow_all",
+                safety_filter_level=None,
                 add_watermark=True,
             )
             save_path = os.path.join(settings.IMAGE_PATH, filename)

@@ -109,7 +109,7 @@ def create_video_from_image(image_filename: str, duration: float, filename: str)
     image_clip = ImageClip(image_path).with_duration(safe_duration)
 
     def _ease_in_zoom_scale(t: float) -> float:
-        zoom_target = 1.18
+        zoom_target = 1.3
         progress = min(1.0, max(0.0, t / safe_duration))
         eased_progress = 0.65 * progress + 0.35 * (1.0 - (1.0 - progress) * (1.0 - progress))
         return 1.0 + (zoom_target - 1.0) * eased_progress

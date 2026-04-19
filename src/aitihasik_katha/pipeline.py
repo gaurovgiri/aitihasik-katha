@@ -6,8 +6,10 @@ from .services.audio_service import generate_audio, get_audio_duration
 from .services.image_service import generate_image
 from .services.story_service import generate_story
 from .services.subtitle_service import generate_transcription, get_subtitle
+from .services.caption_service import generate_caption
 from .services.video_service import create_video_from_image, merge_video_clips
-
+from .utils.gcs import upload_file_to_gcs
+from .services.instagram_service import instagram
 
 def run_pipeline(topic: str | None = None) -> str | None:
     ensure_directories()
@@ -63,7 +65,17 @@ def run_pipeline(topic: str | None = None) -> str | None:
     if final_video:
         output_path = os.path.join(settings.OUTPUT_PATH, final_video)
         print(f"The video is ready at {output_path}")
-    return final_video
+        media_uri = upload_file_to_gcs(settings.BUCKET, output_path, final_video)
+        print(f"The video is uploaded to {media_uri}")
+        print(f"Generating a caption for this video")
+        caption = generate_caption(story)
+        print(f"Uploading to instagram!")
+        instagram.upload_media(media_uri, 
+                               caption=caption, 
+                               media_type="REELS")
+        print(f"Upload complete to instagram!")
+
+
 
 
 if __name__ == "__main__":
