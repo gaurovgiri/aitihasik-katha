@@ -1,234 +1,293 @@
-# Aitihasik Katha (Historical Stories)
+# 🎬 Aitihasik Katha
 
-An AI-powered historical storytelling platform that automatically generates engaging video content from historical documents. The system uses RAG (Retrieval-Augmented Generation) to create compelling narratives, generates images, synthesizes audio, and produces complete video documentaries.
+AI-powered historical storytelling pipeline that turns historical context into short-form vertical videos.
 
-## 🖵 Demo
+It combines retrieval-augmented generation (RAG), image generation, text-to-speech, subtitle timing, video composition, and optional Instagram publishing.
 
-<video src="examples/example1.mp4" controls width="300"></video>
+## 🎥 Demo
 
-## 🎯 Features
+<video src="https://github.com/gaurovgiri/aitihasik-katha/raw/refs/heads/main/examples/example2.mp4" controls width="300"></video>
 
-- **📚 Document Ingestion**: Process PDF documents (English and Nepali) with OCR support
-- **🤖 AI Story Generation**: Generate compelling historical narratives using RAG and LLM
-- **🖼️ Image Generation**: Create relevant historical images for story segments
-- **🎙️ Audio Synthesis**: Convert text to speech with natural voice-over
-- **🎬 Video Production**: Automatically generate complete documentary-style videos
-- **🌐 Translation**: Support for multilingual content (English/Nepali)
-- **💾 Vector Database**: Chromadb-based embedding storage for efficient retrieval
+## 📱 Live
 
-## 🏗️ Architecture
+Instagram: https://instagram.com/aitihasik_katha
 
-The pipeline consists of the following components:
+## 🚀 What This Project Does
 
-1. **PDF Ingestion** → Extract and process historical content from PDFs
-2. **Vector Store** → Store document embeddings for semantic search
-3. **Story Generation** → Use RAG to generate engaging narratives
-4. **Image Generation** → Create visuals for story segments
-5. **Audio Generation** → Synthesize voice-over audio
-6. **Video Production** → Merge images and audio into final video
+Given a topic (or random historical context), the pipeline:
 
-## 📁 Project Structure
+1. Retrieves relevant historical passages from a vector-backed knowledge base.
+2. Generates a documentary-style script.
+3. Splits the script into scenes.
+4. Generates one cinematic image per scene.
+5. Synthesizes voice-over audio.
+6. Transcribes audio to timed words for subtitles.
+7. Builds animated clips from images and merges everything into one reel.
+8. Uploads the final video to Google Cloud Storage and optionally publishes it to Instagram.
 
-```
+## 🗂️ Current Project Structure
+
+```text
 aitihasik-katha/
 ├── pyproject.toml
 ├── requirements.txt
+├── pyrightconfig.json
 ├── README.md
 ├── data/
-│   ├── audios/
-│   ├── images/
-│   ├── videos/
-│   ├── output/
 │   ├── embeddings/
-│   └── pdfs/
-│       ├── en/
-│       └── ne/
+│   │   ├── chroma.sqlite3
+│   │   ├── nepali-history.json
+│   │   └── 88c6b1ae-a89a-428f-9ded-34a969a755ce/
+│   └── fonts/
+├── examples/
+├── notebooks/
+│   ├── data-ingestion.ipynb
+│   └── instagram-upload.ipynb
+├── runs/
+│   └── <run-id>/
+│       ├── audios/
+│       ├── images/
+│       ├── output/
+│       └── videos/
 ├── src/
-│   ├── aitihasik_katha/
-│   │   ├── __main__.py
-│   │   ├── pipeline.py
-│   │   ├── cli.py
-│   │   ├── core/
-│   │   │   └── settings.py
-│   │   ├── services/
-│   │   │   ├── story_service.py
-│   │   │   ├── image_service.py
-│   │   │   ├── audio_service.py
-│   │   │   ├── subtitle_service.py
-│   │   │   └── video_service.py
-│   │   ├── ingest/
-│   │   │   └── pdf_ingestor.py
-│   │   ├── storage/
-│   │   │   └── vector_store.py
-│   │   └── utils/
-│   │       ├── gcs.py
-│   │       ├── ocr.py
-│   │       └── translation.py
+│   └── aitihasik_katha/
+│       ├── __main__.py
+│       ├── cli.py
+│       ├── pipeline.py
+│       ├── core/
+│       │   └── settings.py
+│       ├── ingest/
+│       │   └── pdf_ingestor.py
+│       ├── services/
+│       │   ├── audio_service.py
+│       │   ├── caption_service.py
+│       │   ├── image_service.py
+│       │   ├── instagram_service.py
+│       │   ├── story_service.py
+│       │   ├── subtitle_service.py
+│       │   └── video_service.py
+│       ├── storage/
+│       │   └── vector_store.py
+│       └── utils/
+│           ├── gcs.py
+│           ├── ocr.py
+│           └── translation.py
+└── tests/
 ```
 
-## 🚀 Getting Started
+## ⚙️ How It Works (End-to-End)
 
-### Prerequisites
+```text
+Topic or random source
+        |
+        v
+Vector retrieval (Vertex Matching Engine + local metadata JSON)
+        |
+        v
+Story generation (Gemini via LangChain)
+        |
+        +------------------------------+
+        |                              |
+        v                              v
+Image generation (Vertex)      Audio generation (Cloud TTS)
+        |                              |
+        +---------------+--------------+
+                        v
+          Speech transcription (Cloud Speech-to-Text)
+                        |
+                        v
+         Subtitle timing + per-scene duration mapping
+                        |
+                        v
+             Video composition (MoviePy + FFmpeg)
+                        |
+                        v
+         Upload to GCS -> optional Instagram publish
+```
 
-- Python 3.10+
-- Tesseract OCR (for PDF text extraction)
-- FFmpeg (for video processing)
+## ☁️ Google Cloud Integration
 
-### Installation
+This project relies on Google Cloud for multiple stages:
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/yourusername/aitihasik-katha.git
-   cd aitihasik-katha
-   ```
+- Vertex AI Matching Engine for semantic retrieval.
+- Vertex image model for scene images.
+- Cloud Text-to-Speech for narration.
+- Cloud Speech-to-Text v2 for word-level subtitles.
+- Cloud Storage for storing the final video artifact.
 
-2. **Install Python dependencies**
-   ```bash
-   pip install -r requirements.txt
-    pip install -e .
-   ```
+### 🧩 Required APIs
 
-3. **Install system dependencies**
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get update
-   sudo apt-get install tesseract-ocr tesseract-ocr-nep ffmpeg
+Enable these APIs in your Google Cloud project:
 
-   # macOS
-   brew install tesseract tesseract-lang ffmpeg
-   ```
+- Vertex AI API
+- Cloud Speech-to-Text API
+- Cloud Text-to-Speech API
+- Cloud Storage API
 
-4. **Set up environment variables**
-   
-   Create a `.env` file in the project root:
-   ```env
-    CHAT_MODEL=gemini-2.0-flash
-   EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
-    GEMINI_API_KEY=your_gemini_api_key_here
-    IMAGE_CHAT_MODEL=gemini-2.0-flash
-    IMAGE_MODEL=imagegeneration@006
-    AUDIO_MODEL=chirp3-hd
-   ```
+### 🔐 Credentials
 
-5. **Set up Google Cloud credentials**
-   
-   Place your `google.json` credentials file in the project root.
+You need service-account credentials and must set `GOOGLE_APPLICATION_CREDENTIALS` in `.env`.
 
-## 📖 Usage
+Example:
 
-### 1. Ingest PDF Documents
+```env
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
+PROJECT_ID=your-gcp-project-id
+LOCATION=us-central1
+BUCKET=your-gcs-bucket
+```
 
-First, add your historical PDF documents to the appropriate directory:
-- English PDFs → `data/pdfs/en/`
-- Nepali PDFs → `data/pdfs/ne/`
+Recommended minimum IAM scopes/roles for the service account:
 
-Then run ingestion:
+- Vertex AI access (query index and use vision model)
+- Speech-to-Text and Text-to-Speech usage
+- Cloud Storage object read/write
+
+## 🛠️ Installation
+
+### 🐍 1. Python environment
+
 ```bash
-python -m aitihasik_katha ingest --base-dir data/pdfs
+python -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+pip install -e .
 ```
 
-### 2. Run the Complete Pipeline
+### 🧱 2. System dependencies
 
-Execute the full pipeline to generate a video:
+`pdf2image` and video rendering require native tools.
+
+macOS:
+
+```bash
+brew install tesseract tesseract-lang ffmpeg poppler
+```
+
+Ubuntu/Debian:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y tesseract-ocr tesseract-ocr-nep ffmpeg poppler-utils
+```
+
+## 🧪 Environment Configuration
+
+Create a `.env` file in the repository root.
+
+```env
+# LLM + generation
+GEMINI_API_KEY=your_gemini_api_key
+CHAT_MODEL=gemini-2.0-flash
+IMAGE_CHAT_MODEL=gemini-2.0-flash
+IMAGE_MODEL=imagegeneration@006
+AUDIO_MODEL=chirp3-hd
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+# Google Cloud
+GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/service-account.json
+PROJECT_ID=your-gcp-project-id
+LOCATION=us-central1
+BUCKET=your-gcs-bucket
+BUCKET_URI=gs://your-gcs-bucket
+
+# Matching Engine configuration
+INDEX_ID=projects/.../locations/.../indexes/...
+INDEX_ENDPOINT_ID=projects/.../locations/.../indexEndpoints/...
+DEPLOYED_INDEX_ID=your-deployed-index-id
+
+# Optional Instagram publish
+INSTAGRAM_CLIENT_ID=...
+INSTAGRAM_CLIENT_SECRET=...
+INSTAGRAM_ACCESS_TOKEN=...
+INSTAGRAM_PAGE_ACCESS_TOKEN=...
+INSTAGRAM_USER_ID=...
+
+# Optional run paths
+RUNS_PATH=runs/
+IMAGE_PATH=images/
+VIDEO_PATH=videos/
+AUDIO_PATH=audios/
+OUTPUT_PATH=output/
+```
+
+## 💻 CLI Usage
+
+All commands are exposed via:
+
+```bash
+python -m aitihasik_katha <command>
+```
+
+### ▶️ Run full pipeline
+
 ```bash
 python -m aitihasik_katha run
 ```
 
-This will:
-1. Generate a story from your historical documents
-2. Create images for each story segment
-3. Generate audio voice-overs
-4. Produce individual video clips
-5. Merge everything into a final video: `data/videos/final_output.mp4`
+With topic seed:
 
-### 3. Individual Components
-
-You can also run components separately:
-
-**Generate a story only:**
-```python
-from aitihasik_katha.services.story_service import generate_story
-
-story = generate_story()
-print(story)
+```bash
+python -m aitihasik_katha run --topic "Unification of Nepal"
 ```
 
-**Generate audio:**
-```python
-from aitihasik_katha.services.audio_service import generate_audio
+Output is created under `runs/<uuid>/`:
 
-generate_audio("Your text here", "output.mp3")
+- `runs/<uuid>/audios/story.mp3`
+- `runs/<uuid>/images/*.png`
+- `runs/<uuid>/videos/*.mp4`
+- `runs/<uuid>/output/final_video.mp4`
+
+### 📚 Ingest PDFs
+
+```bash
+python -m aitihasik_katha ingest --base-dir data/pdfs
 ```
 
-**Generate images:**
-```python
-from aitihasik_katha.services.image_service import generate_image
+Single file:
 
-generate_image("Description of the image", "output.png")
+```bash
+python -m aitihasik_katha ingest --path data/pdfs/en/sample.pdf --language en
 ```
 
-## 🔧 Configuration
+## ⚠️ Important Note About Ingestion
 
-Edit `src/aitihasik_katha/core/settings.py` to customize:
+`ingest` currently parses and chunks PDFs, but `VectorStore.add_document()` is intentionally not implemented for Matching Engine writes in the current codebase.
 
-- **Models**: Change LLM and embedding models
-- **Directories**: Modify data storage locations
-- **OCR Settings**: Adjust Tesseract configurations
-- **API Keys**: Update service credentials
+That means:
 
-## 🛠️ Technologies Used
+- Retrieval during `run` expects an already prepared index and metadata dataset.
+- The project can run end-to-end once Matching Engine + embedding metadata are already provisioned.
+- If you need ingestion-to-index automation, you will need to implement the index upsert step for your environment.
 
-- **LangChain**: Prompt orchestration
-- **Google Gemini / Vertex AI**: Text, image, and video generation
-- **Google Cloud Speech + TTS**: Audio transcription and synthesis
-- **Tesseract**: OCR for image-based PDFs
-- **Sentence Transformers**: Text embeddings
-- **FFmpeg**: Video and audio processing
+## 🔍 Where Google Cloud Is Used In Runtime
 
-## 📊 Workflow
+During `run`, the pipeline does the following cloud operations:
 
-```
-PDF Documents
-    ↓
-[Text Extraction + OCR]
-    ↓
-[Chunking & Embedding]
-    ↓
-[Vector Store (ChromaDB)]
-    ↓
-[RAG: Retrieve + Generate Story]
-    ↓
-[Generate Images] → [Generate Audio]
-    ↓              ↓
-    [Create Video Clips]
-            ↓
-    [Merge Final Video]
-```
+1. Reads neighbors from Vertex Matching Engine for story context.
+2. Calls Gemini and Vertex image generation models.
+3. Calls Cloud TTS to generate `story.mp3`.
+4. Uploads audio to GCS temporarily for Speech-to-Text v2 batch recognition.
+5. Deletes temporary transcription audio object from GCS.
+6. Uploads final video to GCS and returns a public URL.
+7. Optionally sends that URL to Instagram Graph API for publishing.
 
-## 🤝 Contributing
+## 🧯 Troubleshooting
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- `Could not find ffmpeg`: install FFmpeg and ensure it is on your shell `PATH`.
+- `PDFInfoNotInstalledError` from `pdf2image`: install Poppler.
+- `DefaultCredentialsError`: verify `GOOGLE_APPLICATION_CREDENTIALS` path and permissions.
+- Empty or poor retrieval: verify Matching Engine IDs and deployed index configuration.
+- Instagram publish failures: verify page token, user id, and app permissions.
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+## 🧠 Development Notes
 
-## 📝 License
+- Entry point: `python -m aitihasik_katha`
+- CLI commands: `run`, `ingest`
+- Settings source: environment variables loaded via `.env`
+- Main orchestrator: `src/aitihasik_katha/pipeline.py`
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+## 📌 Disclaimer
 
-## 🙏 Acknowledgments
-
-- Historical document sources
-- Open-source LLM and AI communities
-- Contributors and maintainers
-
-## 📧 Contact
-
-For questions or feedback, please open an issue on GitHub.
-
----
-
-**Note**: This project is designed for educational and research purposes related to historical storytelling and AI-powered content generation.
+This project is intended for educational and research use. Always validate generated historical content before publication.
