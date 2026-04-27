@@ -8,9 +8,13 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pdf2image import convert_from_path
 from pypdf import PdfReader
 
+from ..core.logging import get_logger
 from ..storage.vector_store import store as vector_store
 from ..utils.ocr import extract_text
 from ..utils.translation import translate_text_sync
+
+
+logger = get_logger(__name__)
 
 
 def load_pdf(doc_path: str, language: str = "en", batch_size: int = 50) -> list[Document]:
@@ -24,7 +28,7 @@ def load_pdf(doc_path: str, language: str = "en", batch_size: int = 50) -> list[
 
     for start_page in range(1, total_pages + 1, batch_size):
         end_page = min(start_page + batch_size - 1, total_pages)
-        print(f"Processing pages {start_page} to {end_page} of {total_pages}")
+        logger.info("Processing pages %s to %s of %s", start_page, end_page, total_pages)
 
         with tempfile.TemporaryDirectory() as path:
             images = convert_from_path(
@@ -59,10 +63,10 @@ def add_to_vector_store(chunks: list[Document], source: str) -> None:
 
 def ingest_pdf(doc_path: str, language: str = "en") -> None:
     if vector_store.document_exists(doc_path):
-        print(f"{doc_path} is already in store")
+        logger.info("%s is already in store", doc_path)
         return
 
-    print(f"Adding {doc_path} to vector store")
+    logger.info("Adding %s to vector store", doc_path)
     data = load_pdf(doc_path, language)
     chunks = split_text(data)
     add_to_vector_store(chunks, doc_path)
@@ -71,8 +75,7 @@ def ingest_pdf(doc_path: str, language: str = "en") -> None:
     chunks = None
     gc.collect()
 
-    print(f"Added {doc_path} to vector store")
-    print("------------------")
+    logger.info("Added %s to vector store", doc_path)
 
 
 def ingest_directory(base_dir: str = "data/pdfs") -> None:

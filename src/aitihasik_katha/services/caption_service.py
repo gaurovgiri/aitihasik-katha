@@ -1,6 +1,7 @@
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 from aitihasik_katha.core.settings import settings
+from aitihasik_katha.core.logging import get_logger
 
 
 CAPTION_PROMPT = """You are an expert Instagram growth strategist and viral content writer.
@@ -68,8 +69,9 @@ llm = ChatGoogleGenerativeAI(
     model=settings.CHAT_MODEL,
     api_key=settings.GEMINI_API_KEY
 )
+logger = get_logger(__name__)
 
-def generate_caption(story):
+def generate_caption(story) -> str:
     messages = [
         SystemMessage(CAPTION_PROMPT),
         HumanMessage(story)
@@ -85,4 +87,4 @@ def generate_caption(story):
 
 
 if __name__ == "__main__":
-    print(generate_caption("a man with passion"))
+    logger.info(generate_caption("a man with passion"))

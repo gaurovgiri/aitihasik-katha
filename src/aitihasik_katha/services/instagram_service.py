@@ -1,6 +1,10 @@
 import requests
 from aitihasik_katha.core.settings import settings
+from aitihasik_katha.core.logging import get_logger
 import time
+
+
+logger = get_logger(__name__)
 
 class InstagramService:
     BASE_URL = "https://graph.facebook.com/v25.0"
@@ -24,6 +28,7 @@ class InstagramService:
             except ValueError:
                 details = {"raw": response.text}
             raise RuntimeError(f"Request failed: {details}") from exc
+        logger.debug("Instagram GET %s returned status %s", url, response.status_code)
         return response.json()
     
     def _post(self, url: str, params: dict) -> dict:
@@ -100,8 +105,8 @@ class InstagramService:
             response = self._post(url, params)
             media_id = response.get("id")
             return media_id
-        except Exception as e:
-            print(f"Failed Creating Media Container: {str(e)}")
+        except RuntimeError as exc:
+            logger.error("Failed creating media container: %s", exc)
             return ""
 
 
@@ -118,15 +123,19 @@ class InstagramService:
             }
 
             while not self.is_media_ready(media_container_id):
-                time.sleep(20)
+                logger.info("Media not ready, retrying after 1 minute")
+                time.sleep(60)
             try:
                 response = self._post(publish_url, params)
                 if response:
-                    print(f"Post Published for {caption if len(caption) < 50 else caption[:50]}...")
-            except Exception as e:
-                print(f"Error Uploading to Instagram: {e}")
+                    logger.info(
+                        "Post published for caption preview: %s...",
+                        caption if len(caption) < 50 else caption[:50],
+                    )
+            except RuntimeError as exc:
+                logger.error("Error uploading to Instagram: %s", exc)
         else:
-            print("Error creating media")
+            logger.error("Failed to create media container")
     
     def is_media_ready(self, media_container_id: str) -> bool:
         """Check Instagram media container processing status."""
@@ -136,6 +145,8 @@ class InstagramService:
             "fields": "status_code",
         }
         data = self._get(url, params)
+        if data.get("status_code") == "ERROR":
+            raise RuntimeError("Media upload failed!")
         return data.get("status_code") == "FINISHED"
 
 
@@ -145,9 +156,10 @@ instagram = InstagramService(
     )
 
 if __name__ == "__main__":
-
+    with open("runs/82b7f3cb-c7c1-48b3-b072-c378b4bc05c6/output/caption.txt", "r", encoding="utf-8") as cap_file:
+        caption_text = cap_file.read()
     instagram.upload_media(
-        "https://storage.googleapis.com/aitihasik-katha-bucket/final_video.mp4",
-        "Testing Caption",
+        "https://storage.googleapis.com/aitihasik-katha-bucket/runs/82b7f3cb-c7c1-48b3-b072-c378b4bc05c6/output/final_video.mp4",
+        caption_text,
         "REELS"
     )

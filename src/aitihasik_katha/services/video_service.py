@@ -1,12 +1,11 @@
 import math
 import os
 import re
-import time
 from pathlib import Path
 from typing import Iterable
 
 from google import genai
-from google.genai.types import GenerateVideosConfig, GenerateVideosSource
+from google.genai.types import GenerateVideosConfig
 from moviepy import (
     AudioFileClip,
     CompositeVideoClip,
@@ -18,10 +17,11 @@ from moviepy import (
 )
 from moviepy.video.tools.subtitles import file_to_subtitles
 
-from ..core.settings import settings
+from ..core.logging import get_logger
 
 
 client = genai.Client()
+logger = get_logger(__name__)
 config = GenerateVideosConfig(
     aspect_ratio="9:16",
     number_of_videos=1,
@@ -188,18 +188,20 @@ def merge_video_clips(
 
     videos = sorted(videos, key=_video_sort_key)
     if not videos:
-        print("No video clips found! Skipping merge.")
+        logger.warning("No video clips found. Skipping merge")
         return None
+
+    logger.info("Merging %s video clip(s)", len(videos))
 
     video_clips = []
     for video in videos:
         try:
             video_clips.append(VideoFileClip(video))
         except (OSError, ValueError) as exc:
-            print(f"Error occurred while loading clip '{video}': {exc}")
+            logger.error("Error occurred while loading clip '%s': %s", video, exc)
 
     if not video_clips:
-        print("No valid video clips could be loaded. Skipping merge.")
+        logger.warning("No valid video clips could be loaded. Skipping merge")
         return None
 
     final_clip = concatenate_videoclips(video_clips)

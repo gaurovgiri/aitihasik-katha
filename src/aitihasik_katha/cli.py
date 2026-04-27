@@ -1,5 +1,6 @@
 import argparse
 
+from .core.logging import configure_logging
 from .ingest.pdf_ingestor import ingest_directory, ingest_pdf
 from .pipeline import run_pipeline
 
@@ -20,6 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
+    configure_logging()
     args = build_parser().parse_args()
     if args.command == "run":
         run_pipeline(topic=args.topic)
